@@ -129,13 +129,5 @@ export async function readJsonBody(request: Request): Promise<Record<string, unk
   }
 }
 
-/** Normalizes any string into a snake_case canonical ID, e.g. "Gomu Gomu no Mi" -> "gomu_gomu_no_mi". */
-export function toCanonicalId(value: string): string {
-  return value
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
+// Lives in its own module so client components can use it without pulling in the OpenAI SDK.
+export { toCanonicalId } from "./canonical";
