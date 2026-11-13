@@ -4,6 +4,8 @@
 
 Live at [fizzlegame.com](https://fizzlegame.com) (`SITE_URL` in `src/lib/site.ts`).
 
+Link previews come from `src/app/opengraph-image.tsx` (re-exported by `twitter-image.tsx`), prerendered at build time. Keep file reads at module scope and network fetches inside a `"use cache"` helper: I/O in the handler body makes the image dynamic under `cacheComponents`. Fredoka is fetched as a TTF subset because the renderer can't read woff2.
+
 
 A 2-8 player naming duel. Players take turns naming items in a topic against chess clocks; an AI referee validates each move. Two modes: **Local** (pass-and-play on one screen) and **Online** (each player on their own screen, joined by a 4-letter room code). Turn order is Fisher-Yates shuffled (`src/lib/shuffle.ts`) at the start of every match in both modes.
 

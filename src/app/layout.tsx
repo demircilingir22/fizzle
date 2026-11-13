@@ -28,8 +28,9 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     locale: "en_US",
   },
+  // The images themselves come from opengraph-image.tsx / twitter-image.tsx.
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
   },
