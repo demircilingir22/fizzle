@@ -2,13 +2,13 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "blitz-duel",
+      "name": "fizzle",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
     },
     {
-      "name": "blitz-duel-prod",
+      "name": "fizzle-prod",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["next", "start", "-p", "3001"],
       "port": 3001

@@ -87,18 +87,21 @@ const submitButtonClass =
 
 /** Step A of joining: the 4-letter room code. */
 export function JoinCodeScreen({
+  initialCode,
   onSubmit,
   onBack,
   loading,
   error,
 }: {
+  /** Pre-filled code (from an invite link, or coming back from the name step). */
+  initialCode?: string;
   onSubmit: (code: string) => void;
   onBack: () => void;
   loading: boolean;
   error: string | null;
 }) {
   const inputId = useId();
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(() => cleanRoomCode(initialCode ?? ""));
   const complete = code.length === ROOM_CODE_LENGTH;
 
   function handleSubmit(event: FormEvent) {

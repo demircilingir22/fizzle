@@ -1,3 +1,15 @@
+/** A 4-point sparkle centered on 0,0. */
+const star = (r: number) => {
+  const k = r * 0.32;
+  return `M0 ${-r} L${k} ${-k} L${r} 0 L${k} ${k} L0 ${r} L${-k} ${k} L${-r} 0 L${-k} ${-k} Z`;
+};
+
+const TWINKLES = [
+  { x: 116, y: 5, size: 3.6, delay: "0s" },
+  { x: 95, y: 3, size: 2.8, delay: "0.45s" },
+  { x: 115, y: 21, size: 2.4, delay: "0.9s" },
+];
+
 type BombMascotProps = {
   className?: string;
   /** Body color of the bomb. */
@@ -18,6 +30,7 @@ export function BombMascot({ className, color = "#cdbcf6" }: BombMascotProps) {
         strokeWidth="7"
         strokeLinecap="round"
       />
+      {/* Dashes creep toward the bomb: the fuse is burning down. */}
       <path
         d="M86 28 C 92 14, 104 24, 105 11"
         fill="none"
@@ -25,6 +38,7 @@ export function BombMascot({ className, color = "#cdbcf6" }: BombMascotProps) {
         strokeWidth="3.5"
         strokeLinecap="round"
         strokeDasharray="4 3"
+        className="fuse-burn"
       />
 
       {/* Cap */}
@@ -67,18 +81,45 @@ export function BombMascot({ className, color = "#cdbcf6" }: BombMascotProps) {
           <circle r="2.4" fill="#fff7c2" />
         </g>
       </g>
+
+      {/* Twinkles thrown off by the spark */}
+      {TWINKLES.map(({ x, y, size, delay }) => (
+        <g key={`${x}-${y}`} transform={`translate(${x} ${y})`}>
+          <path
+            d={star(size)}
+            fill="#ffd36b"
+            stroke="#3d2c46"
+            strokeWidth="0.8"
+            strokeLinejoin="round"
+            className="twinkle"
+            style={{ animationDelay: delay }}
+          />
+        </g>
+      ))}
     </svg>
   );
 }
 
-/** Mascot + "BlitzDuel" wordmark for the home screen. */
+const WORDMARK = [
+  { letter: "F", color: "text-coral", tilt: "-rotate-6" },
+  { letter: "i", color: "text-coral", tilt: "rotate-3 -translate-y-1" },
+  { letter: "z", color: "text-coral", tilt: "-rotate-3" },
+  { letter: "z", color: "text-coral", tilt: "rotate-6 translate-y-0.5" },
+  { letter: "l", color: "text-lavender-deep", tilt: "-rotate-3 -translate-y-1" },
+  { letter: "e", color: "text-lavender-deep", tilt: "rotate-6" },
+];
+
+/** Mascot + bouncy "Fizzle" wordmark. */
 export function GameLogo() {
   return (
     <div className="flex flex-col items-center gap-1 sm:flex-row sm:gap-3">
       <BombMascot className="animate-float size-24 sm:size-28" />
-      <h1 className="font-display text-6xl leading-none font-bold tracking-tight sm:text-7xl">
-        <span className="text-coral [text-shadow:0_4px_0_var(--color-ink)]">Blitz</span>
-        <span className="text-lavender-deep [text-shadow:0_4px_0_var(--color-ink)]">Duel</span>
+      <h1 className="font-display text-7xl leading-none font-bold sm:text-8xl">
+        {WORDMARK.map(({ letter, color, tilt }, i) => (
+          <span key={i} className={`inline-block [text-shadow:0_4px_0_var(--color-ink)] ${color} ${tilt}`}>
+            {letter}
+          </span>
+        ))}
       </h1>
     </div>
   );

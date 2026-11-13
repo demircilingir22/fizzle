@@ -1,11 +1,24 @@
 "use client";
 
-import { Check, Copy, Crown, Hourglass, LoaderCircle, Play, UserPlus, WifiOff } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+  Check,
+  Copy,
+  Crown,
+  Globe,
+  Hourglass,
+  Link,
+  LoaderCircle,
+  Play,
+  UserPlus,
+  WifiOff,
+  type LucideIcon,
+} from "lucide-react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { BombMascot } from "@/components/Logo";
 import { BackButton, ErrorBanner, SettingsSummary } from "@/components/ui";
 import { MAX_PLAYERS, MIN_PLAYERS, playerColor } from "@/lib/game";
 import type { RoomView } from "@/lib/online";
+import { SITE_URL, inviteLink, inviteOrigin } from "@/lib/site";
 
 type OnlineLobbyProps = {
   room: RoomView;
@@ -34,10 +47,12 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-export function OnlineLobby({ room, onStart, onLeave, starting, error }: OnlineLobbyProps) {
-  const isHost = room.you === room.hostId;
-  const host = room.players.find((p) => p.isHost);
-  const enough = room.players.length >= MIN_PLAYERS;
+const subscribeNever = () => () => {};
+/** fizzlegame.com in production; this machine's address during local or LAN play. */
+const readInviteOrigin = () => inviteOrigin(window.location);
+
+/** A copy button that briefly says "Copied!". */
+function CopyButton({ text, label, icon: Icon, className }: { text: string; label: string; icon: LucideIcon; className: string }) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -45,6 +60,25 @@ export function OnlineLobby({ room, onStart, onLeave, starting, error }: OnlineL
     const timer = setTimeout(() => setCopied(false), 1600);
     return () => clearTimeout(timer);
   }, [copied]);
+
+  return (
+    <button
+      type="button"
+      onClick={async () => setCopied(await copyText(text))}
+      aria-live="polite"
+      className={`press flex h-12 items-center justify-center gap-1.5 rounded-full border-[3px] border-ink px-4 text-sm font-extrabold ${className}`}
+    >
+      {copied ? <Check className="size-5" strokeWidth={3} /> : <Icon className="size-5" strokeWidth={2.5} />}
+      {copied ? "Copied!" : label}
+    </button>
+  );
+}
+
+export function OnlineLobby({ room, onStart, onLeave, starting, error }: OnlineLobbyProps) {
+  const isHost = room.you === room.hostId;
+  const host = room.players.find((p) => p.isHost);
+  const enough = room.players.length >= MIN_PLAYERS;
+  const origin = useSyncExternalStore(subscribeNever, readInviteOrigin, () => SITE_URL);
 
   return (
     <main className="animate-screen-in mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-6 px-4 py-8">
@@ -58,21 +92,24 @@ export function OnlineLobby({ room, onStart, onLeave, starting, error }: OnlineL
         className="bg-paper flex w-full flex-col items-center gap-2 rounded-[2.25rem] border-[3px] border-ink px-5 py-5 text-center shadow-[0_8px_0_0_rgb(61_44_70/0.18)]"
       >
         <p className="text-ink-soft text-xs font-extrabold tracking-widest uppercase">Room code</p>
-        <div className="flex items-center gap-3">
-          <span className="font-display text-coral pl-[0.3em] text-6xl font-bold tracking-[0.3em] [text-shadow:0_4px_0_var(--color-ink)] sm:text-7xl">
-            {room.code}
+        <span className="font-display text-coral pl-[0.3em] text-6xl font-bold tracking-[0.3em] [text-shadow:0_4px_0_var(--color-ink)] sm:text-7xl">
+          {room.code}
+        </span>
+        <p className="bg-sky font-display flex max-w-full items-center gap-2 rounded-full border-[3px] border-ink/15 px-4 py-1.5 text-lg leading-tight font-semibold">
+          <Globe className="size-5 shrink-0" strokeWidth={2.5} aria-hidden="true" />
+          <span>
+            Join on any device at <strong className="font-bold">{new URL(origin).host}</strong>
           </span>
-          <button
-            type="button"
-            onClick={async () => setCopied(await copyText(room.code))}
-            aria-label={copied ? "Room code copied" : "Copy room code"}
-            className="press bg-butter flex h-12 items-center gap-1.5 rounded-full border-[3px] border-ink px-4 text-sm font-extrabold"
-          >
-            {copied ? <Check className="size-5" strokeWidth={3} /> : <Copy className="size-5" strokeWidth={2.5} />}
-            {copied ? "Copied!" : "Copy"}
-          </button>
+        </p>
+        <div className="mt-1 flex w-full flex-col justify-center gap-2 sm:flex-row">
+          <CopyButton text={room.code} label="Copy Code" icon={Copy} className="bg-butter" />
+          <CopyButton
+            text={inviteLink(origin, room.code)}
+            label="Copy Invite Link"
+            icon={Link}
+            className="bg-mint"
+          />
         </div>
-        <p className="text-ink-soft text-sm font-semibold">Friends join from Online Multiplayer → Join Room.</p>
         <SettingsSummary
           genre={room.settings.genre}
           difficulty={room.settings.difficulty}

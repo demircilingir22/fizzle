@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fredoka, Nunito } from "next/font/google";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const fredoka = Fredoka({
@@ -13,8 +14,25 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "BlitzDuel",
-  description: "A cozy hot-seat naming duel. Name it before your fuse runs out!",
+  metadataBase: new URL(SITE_URL),
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  alternates: { canonical: "/" },
+  // Link previews in iMessage, Discord, WhatsApp, Slack...
+  openGraph: {
+    type: "website",
+    url: "/",
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export const viewport: Viewport = {

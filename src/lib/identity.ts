@@ -7,9 +7,9 @@
  * on the server.
  */
 
-const PLAYER_KEY = "blitz-duel:playerId";
-const ROOM_KEY = "blitz-duel:roomCode";
-const CHANNEL = "blitz-duel:players";
+const PLAYER_KEY = "fizzle:playerId";
+const ROOM_KEY = "fizzle:roomCode";
+const CHANNEL = "fizzle:players";
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{16,64}$/;
 

@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 
 /**
- * Shared AI client for BlitzDuel. Server-only: import this from route
+ * Shared AI client for Fizzle. Server-only: import this from route
  * handlers (src/app/api/**), never from client components.
  *
  * All config comes from .env.local — model names are never hardcoded.

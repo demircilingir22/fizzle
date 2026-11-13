@@ -4,7 +4,7 @@
  * Server-only. Room state is plain JSON kept in a hybrid store:
  * - Upstash Redis when UPSTASH_REDIS_REST_URL/TOKEN (or Vercel's KV_REST_API_URL/TOKEN)
  *   are set: production on Vercel, where every request may hit a different instance.
- * - Otherwise an in-memory globalThis.__blitzRooms Map, so `npm run dev` works offline.
+ * - Otherwise an in-memory globalThis.__fizzleRooms Map, so `npm run dev` works offline.
  *
  * Every change is load → change → compare-and-set save (see updateRoom), retried
  * on conflict, so concurrent requests never overwrite each other's updates.
@@ -189,11 +189,11 @@ interface RoomBackend {
 type MemoryEntry = RawRoom & { expiresAt: number };
 
 declare global {
-  var __blitzRooms: Map<string, MemoryEntry> | undefined;
+  var __fizzleRooms: Map<string, MemoryEntry> | undefined;
 }
 
 function memoryBackend(): RoomBackend {
-  const rooms: Map<string, MemoryEntry> = (globalThis.__blitzRooms ??= new Map());
+  const rooms: Map<string, MemoryEntry> = (globalThis.__fizzleRooms ??= new Map());
   const live = (code: string) => {
     const entry = rooms.get(code);
     // Entries from before a hot reload may have an older shape: treat them as gone.
@@ -232,7 +232,7 @@ function memoryBackend(): RoomBackend {
   };
 }
 
-// Each room is one hash at room:<code>: `rev`, `state` (JSON) and `seen:<playerId>` heartbeats.
+// Each room is one hash at fizzle:room:<code>: `rev`, `state` (JSON) and `seen:<playerId>` heartbeats.
 const WRITE_SCRIPT = `
 local rev = redis.call('HGET', KEYS[1], 'rev')
 if ARGV[1] == '0' then
@@ -266,7 +266,7 @@ function redisBackend(url: string, token: string): RoomBackend {
   const writeScript = redis.createScript<number>(WRITE_SCRIPT);
   const removeScript = redis.createScript<number>(REMOVE_SCRIPT);
   const touchScript = redis.createScript<number>(TOUCH_SCRIPT);
-  const key = (code: string) => `room:${code}`;
+  const key = (code: string) => `fizzle:room:${code}`;
   const ttl = String(ROOM_TTL_SECONDS);
 
   return {

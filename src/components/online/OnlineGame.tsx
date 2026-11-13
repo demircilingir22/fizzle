@@ -1,8 +1,9 @@
 "use client";
 
 import { KeyRound, LogOut, Users } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { CozyLoader } from "@/components/CozyLoader";
+import { BombMascot } from "@/components/Logo";
 import { HomeScreen } from "@/components/HomeScreen";
 import { OnlineGameScreen } from "@/components/online/OnlineGameScreen";
 import { OnlineLobby } from "@/components/online/OnlineLobby";
@@ -17,11 +18,22 @@ type Step =
   | { name: "entry" }
   | { name: "host-setup" }
   | { name: "host-name" }
-  | { name: "join-code" }
+  /** Opened from an invite link (?room=ABCD): checking the room before asking for a name. */
+  | { name: "invite"; code: string }
+  | { name: "join-code"; code?: string }
   | { name: "join-name"; preview: RoomView }
   | { name: "room"; code: string; initial: RoomView | null };
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof Error ? err.message : fallback);
+
+/** Looks a code up before joining. Throws (with a player-facing message) if it's missing or full. */
+async function checkRoomCode(code: string): Promise<RoomView> {
+  const preview = await roomApi.get(code, getPlayerId());
+  if (!preview.you && preview.players.length >= MAX_PLAYERS) {
+    throw new Error(`Room ${code} is full (${MAX_PLAYERS} players max).`);
+  }
+  return preview;
+}
 
 const toRoomSettings = ({ genre, difficulty, seconds }: Settings): RoomSettings => ({
   genre: genre.trim(),
@@ -29,10 +41,22 @@ const toRoomSettings = ({ genre, difficulty, seconds }: Settings): RoomSettings 
   seconds,
 });
 
+type OnlineGameProps = {
+  /** Room code from an invite link, to join right away. */
+  inviteCode: string | null;
+  /** Room this tab was in before a reload. */
+  resumeCode: string | null;
+  onExit: () => void;
+};
+
 /** Online multiplayer: create/join a room, then the lobby and synced matches. */
-export function OnlineGame({ resumeCode, onExit }: { resumeCode: string | null; onExit: () => void }) {
+export function OnlineGame({ inviteCode, resumeCode, onExit }: OnlineGameProps) {
   const [step, setStep] = useState<Step>(() =>
-    resumeCode ? { name: "room", code: resumeCode, initial: null } : { name: "entry" },
+    inviteCode
+      ? { name: "invite", code: inviteCode }
+      : resumeCode
+        ? { name: "room", code: resumeCode, initial: null }
+        : { name: "entry" },
   );
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [busy, setBusy] = useState(false);
@@ -40,8 +64,8 @@ export function OnlineGame({ resumeCode, onExit }: { resumeCode: string | null; 
   /** Why the player was sent back to the entry screen. */
   const [notice, setNotice] = useState<string | null>(null);
 
-  function go(next: Step) {
-    setError(null);
+  function go(next: Step, nextError: string | null = null) {
+    setError(nextError);
     setBusy(false);
     setStep(next);
   }
@@ -51,6 +75,36 @@ export function OnlineGame({ resumeCode, onExit }: { resumeCode: string | null; 
     setNotice(null);
     go({ name: "room", code: view.code, initial: view });
   }
+
+  function openPreview(preview: RoomView) {
+    // Already in this room from this tab (went back by mistake, or opened their own invite): walk straight in.
+    if (preview.you) enterRoom(preview);
+    else go({ name: "join-name", preview });
+  }
+
+  const finishInvite = useEffectEvent((code: string, result: { preview: RoomView } | { error: unknown }) => {
+    if ("preview" in result) openPreview(result.preview);
+    // Show the code on the join screen so they can fix a typo or try again.
+    else go({ name: "join-code", code }, errorMessage(result.error, "Couldn't find that room. Try again!"));
+  });
+
+  const inviteStepCode = step.name === "invite" ? step.code : null;
+  useEffect(() => {
+    if (!inviteStepCode) return;
+    // Following an invite to another room means leaving the one this tab was in.
+    if (resumeCode && resumeCode !== inviteStepCode) {
+      roomApi.leave(resumeCode, getPlayerId()).catch(() => {});
+      savedRoom.clear();
+    }
+    let cancelled = false;
+    checkRoomCode(inviteStepCode).then(
+      (preview) => !cancelled && finishInvite(inviteStepCode, { preview }),
+      (error: unknown) => !cancelled && finishInvite(inviteStepCode, { error }),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [inviteStepCode, resumeCode]);
 
   async function run(task: () => Promise<void>, fallback: string) {
     setBusy(true);
@@ -109,22 +163,32 @@ export function OnlineGame({ resumeCode, onExit }: { resumeCode: string | null; 
         />
       );
 
+    case "invite":
+      return (
+        <Centered>
+          <BombMascot className="animate-float size-28" color="#bfe0fa" />
+          <p role="status" className="font-display text-2xl font-semibold">
+            Opening your invite to room <span className="tracking-wider">{step.code}</span>…
+          </p>
+          <button
+            type="button"
+            onClick={() => go({ name: "entry" })}
+            className="text-ink-soft hover:text-ink text-sm font-bold underline underline-offset-4"
+          >
+            Cancel
+          </button>
+        </Centered>
+      );
+
     case "join-code":
       return (
         <JoinCodeScreen
+          initialCode={step.code}
           onBack={() => go({ name: "entry" })}
           loading={busy}
           error={error}
           onSubmit={(code) =>
-            run(async () => {
-              const preview = await roomApi.get(code, getPlayerId());
-              // Already in this room from this tab (e.g. went back by mistake): walk straight in.
-              if (preview.you) return enterRoom(preview);
-              if (preview.players.length >= MAX_PLAYERS) {
-                throw new Error(`Room ${code} is full (${MAX_PLAYERS} players max).`);
-              }
-              go({ name: "join-name", preview });
-            }, "Couldn't find that room. Try again!")
+            run(async () => openPreview(await checkRoomCode(code)), "Couldn't find that room. Try again!")
           }
         />
       );
@@ -148,7 +212,7 @@ export function OnlineGame({ resumeCode, onExit }: { resumeCode: string | null; 
             </div>
           }
           submitLabel="Join room"
-          onBack={() => go({ name: "join-code" })}
+          onBack={() => go({ name: "join-code", code: preview.code })}
           loading={busy}
           error={error}
           onSubmit={(name) =>

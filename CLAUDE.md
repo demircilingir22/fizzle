@@ -1,6 +1,9 @@
 @AGENTS.md
 
-# BlitzDuel
+# Fizzle
+
+Live at [fizzlegame.com](https://fizzlegame.com) (`SITE_URL` in `src/lib/site.ts`).
+
 
 A 2-8 player naming duel. Players take turns naming items in a topic against chess clocks; an AI referee validates each move. Two modes: **Local** (pass-and-play on one screen) and **Online** (each player on their own screen, joined by a 4-letter room code). Turn order is Fisher-Yates shuffled (`src/lib/shuffle.ts`) at the start of every match in both modes.
 
@@ -35,7 +38,7 @@ A 2-8 player naming duel. Players take turns naming items in a topic against che
 
 ## Online rooms
 
-- Hybrid store in `src/lib/rooms.ts`: with the Upstash vars set, each room is a Redis hash at `room:${code}` (`rev`, JSON `state`, `seen:<playerId>` heartbeats) with a 2-hour TTL; without them it falls back to the in-memory `globalThis.__blitzRooms` Map, so local dev needs no setup. Room state must stay plain JSON: no Promises, class instances or functions.
+- Hybrid store in `src/lib/rooms.ts`: with the Upstash vars set, each room is a Redis hash at `fizzle:room:${code}` (`rev`, JSON `state`, `seen:<playerId>` heartbeats) with a 2-hour TTL; without them it falls back to the in-memory `globalThis.__fizzleRooms` Map, so local dev needs no setup. Room state must stay plain JSON: no Promises, class instances or functions.
 - Change room state only through `updateRoom(code, now, change)`: it loads, runs `change`, and saves with a compare-and-set on `rev`, re-running `change` on conflict. `change` must be safe to re-run and free of side effects; work that has to happen after a save (background category generation) is scheduled with `after()` from `next/server`.
 - No timers: every request calls `catchUp()` first, which drops stale players and applies countdown end, fuse expiry, explosion settle and the loading/referee timeouts at the exact time each was due, so concurrent requests agree. Clients poll `GET /api/rooms/[code]` at the `pollMs` each response carries (`ROOM_POLL_MS` during a match, slower on idle screens), which drives the state machine.
 - Identity: each tab's secret `playerId` lives in `sessionStorage` (`src/lib/identity.ts`) and is sent as the `x-player-id` header. It is never sent to other clients; they see a public seat `id`. Status 404 = room gone, 410 = no longer a member, 403 = not allowed (host-only / not your turn).

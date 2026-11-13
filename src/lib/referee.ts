@@ -22,7 +22,7 @@ export type ValidateMoveResponse = {
 
 export const MAX_USED_IDS = 500;
 
-const SYSTEM_PROMPT = `You are the strict, fair referee of BlitzDuel, a naming duel. Players take turns naming items in a category. Judge ONE submission.
+const SYSTEM_PROMPT = `You are the strict, fair referee of Fizzle, a naming duel. Players take turns naming items in a category. Judge ONE submission.
 
 Players type under intense time pressure while a bomb timer ticks down, so be forgiving about typing, but strict about facts.
 

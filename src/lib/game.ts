@@ -1,5 +1,5 @@
 /**
- * Client-side game model for BlitzDuel: settings, player colors, the match
+ * Client-side game model for Fizzle: settings, player colors, the match
  * reducer, and typed wrappers around the API routes.
  *
  * Nothing in here touches the AI SDK; the route types are imported as types only.

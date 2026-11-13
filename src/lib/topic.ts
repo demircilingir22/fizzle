@@ -17,7 +17,7 @@ export type TopicDifficulty = (typeof TOPIC_DIFFICULTIES)[number];
 /** Most categories the model is asked to avoid in one request. */
 export const MAX_PREVIOUS_CATEGORIES = 20;
 
-const SYSTEM_PROMPT = `You pick categories for BlitzDuel, a 2-player naming duel where players take turns naming items that belong to a category until one runs out of time.
+const SYSTEM_PROMPT = `You pick categories for Fizzle, a 2-player naming duel where players take turns naming items that belong to a category until one runs out of time.
 
 Given a genre and a difficulty, choose ONE category within that genre:
 - Easy: a common, widely known subsection or group belonging to the genre.
