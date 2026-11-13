@@ -288,7 +288,8 @@ export function OnlineGameScreen({
         totalMs={totalMs}
         active={match.active}
         phase={phase}
-        ticking={clockRunning}
+        // A handed-over clock starts a poll interval late (see rooms.ts): no ticking until then.
+        ticking={clockRunning && turnStartedAt !== null && now >= turnStartedAt}
         frozen={match.validating || (submitting && isMyTurn)}
         turnLabel={isMyTurn ? "Your turn!" : "Answering…"}
       />

@@ -118,6 +118,8 @@ export type RoomView = {
   version: number;
   /** Server clock (Unix ms) when this view was built, for clock-offset estimation. */
   serverNow: number;
+  /** How long the client should wait before its next poll (set by ROOM_POLL_MS on the server). */
+  pollMs: number;
 };
 
 export type ReplayAction = "same_genre" | "choose_genre" | "cancel_genre" | "new_genre";
@@ -127,7 +129,7 @@ export const ONLINE_COUNTDOWN_STEPS = 3;
 export const ONLINE_COUNTDOWN_STEP_MS = 1000;
 export const ONLINE_EXPLOSION_MS = 1600;
 
-/** Polling interval for GET /api/rooms/[code]. */
+/** Polling interval for GET /api/rooms/[code] until the server's first `pollMs` arrives. */
 export const POLL_MS = 250;
 
 /** Header carrying the requester's secret playerId. */

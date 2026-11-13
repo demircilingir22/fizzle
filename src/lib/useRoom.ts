@@ -6,14 +6,15 @@ import { POLL_MS, isGoneError, roomApi, type RoomView } from "@/lib/online";
 
 /** Round-trip samples kept for the clock-offset estimate. */
 const OFFSET_SAMPLES = 16;
-/** Consecutive failed polls (about 2s) before showing "Reconnecting…". */
-const OFFLINE_AFTER_FAILURES = 8;
+/** Time without a successful poll before showing "Reconnecting…". */
+const OFFLINE_AFTER_MS = 3_000;
 
 type Sample = { rtt: number; offset: number };
 
 /**
- * Keeps a room in sync by polling GET /api/rooms/[code] every 250ms, and
- * estimates the server clock so countdowns render smoothly at 60fps.
+ * Keeps a room in sync by polling GET /api/rooms/[code] (as often as the
+ * server's `pollMs` says), and estimates the server clock so countdowns render
+ * smoothly at 60fps.
  *
  * `code` must not change for the lifetime of the component (key it by code).
  */
@@ -21,6 +22,8 @@ export function useRoom(code: string, initial: RoomView | null, onGone: (message
   const [room, setRoom] = useState<RoomView | null>(initial);
   const [offline, setOffline] = useState(false);
   const versionRef = useRef(initial?.version ?? -1);
+  /** The server picks the interval: faster during a match, slower in the lobby and on results. */
+  const pollMsRef = useRef(initial?.pollMs ?? POLL_MS);
   const samplesRef = useRef<Sample[]>([]);
   /** Server Unix ms minus local performance.now(); defaults to assuming synced wall clocks. */
   const offsetRef = useRef<number | null>(null);
@@ -52,6 +55,7 @@ export function useRoom(code: string, initial: RoomView | null, onGone: (message
       }
       if (view.version < versionRef.current) return;
       versionRef.current = view.version;
+      if (Number.isFinite(view.pollMs) && view.pollMs > 0) pollMsRef.current = view.pollMs;
       setRoom(view);
     },
     [gone],
@@ -61,7 +65,7 @@ export function useRoom(code: string, initial: RoomView | null, onGone: (message
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let controller: AbortController | null = null;
-    let failures = 0;
+    let lastSuccess = performance.now();
 
     async function poll() {
       controller = new AbortController();
@@ -69,7 +73,7 @@ export function useRoom(code: string, initial: RoomView | null, onGone: (message
       try {
         const view = await roomApi.get(code, getPlayerId(), controller.signal);
         if (cancelled) return;
-        failures = 0;
+        lastSuccess = performance.now();
         setOffline(false);
         apply(view, sentAt, performance.now());
       } catch (err) {
@@ -78,10 +82,9 @@ export function useRoom(code: string, initial: RoomView | null, onGone: (message
           gone(err instanceof Error ? err.message : "The room closed.");
           return;
         }
-        failures += 1;
-        if (failures >= OFFLINE_AFTER_FAILURES) setOffline(true);
+        if (performance.now() - lastSuccess > OFFLINE_AFTER_MS) setOffline(true);
       }
-      timer = setTimeout(poll, POLL_MS);
+      timer = setTimeout(poll, pollMsRef.current);
     }
 
     poll();
