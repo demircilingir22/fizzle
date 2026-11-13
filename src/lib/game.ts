@@ -4,9 +4,9 @@
  *
  * Nothing in here touches the AI SDK; the route types are imported as types only.
  */
-import type { GenerateTopicResponse } from "@/app/api/generate-topic/route";
-import type { ValidateMoveResponse } from "@/app/api/validate-move/route";
 import { nameVariantIds, toCanonicalId } from "@/lib/canonical";
+import type { ValidateMoveResponse } from "@/lib/referee";
+import type { GenerateTopicResponse } from "@/lib/topic";
 
 // ---------------------------------------------------------------------------
 // Settings
@@ -43,12 +43,16 @@ export const DEFAULT_SETTINGS: Settings = {
 export type Topic = GenerateTopicResponse;
 export type Verdict = ValidateMoveResponse;
 
+/** A player in a local match. `color` is their seat color, kept through turn-order shuffles. */
+export type LocalPlayer = { name: string; color: number };
+
 /** Everything a match needs, frozen at the moment it starts. */
 export type Match = {
   id: number;
   settings: Settings;
   topic: Topic;
-  playerNames: string[];
+  /** Players in this match's (shuffled) turn order. */
+  players: LocalPlayer[];
 };
 
 export const defaultPlayerName = (index: number) => `Player ${index + 1}`;
@@ -117,6 +121,8 @@ export type GamePhase = "countdown" | "playing" | "exploding" | "over";
 
 export type GamePlayer = {
   name: string;
+  /** Index into PLAYER_COLORS. */
+  color: number;
   lastAnswer: string | null;
   answers: number;
   eliminated: boolean;
@@ -147,10 +153,10 @@ export type GameAction =
   | { type: "explode"; player: number }
   | { type: "settle" };
 
-export function initGame(playerNames: string[]): GameState {
+export function initGame(players: LocalPlayer[]): GameState {
   return {
     phase: "countdown",
-    players: playerNames.map((name) => ({ name, lastAnswer: null, answers: 0, eliminated: false })),
+    players: players.map(({ name, color }) => ({ name, color, lastAnswer: null, answers: 0, eliminated: false })),
     active: 0,
     usedCanonicalIds: [],
     usedKeys: [],
@@ -162,7 +168,7 @@ export function initGame(playerNames: string[]): GameState {
 }
 
 /** Next player after `from` who is still in the game, wrapping around. */
-export function nextSurvivor(players: GamePlayer[], from: number): number {
+export function nextSurvivor(players: readonly { eliminated: boolean }[], from: number): number {
   for (let step = 1; step <= players.length; step++) {
     const index = (from + step) % players.length;
     if (!players[index].eliminated) return index;
@@ -254,18 +260,18 @@ async function postJson(url: string, body: unknown, signal?: AbortSignal): Promi
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** Most recent categories sent as `avoidCategories` (the route accepts up to 20). */
-export const MAX_AVOID_CATEGORIES = 20;
+/** Most recent categories sent as `previousCategories` (the route accepts up to 20). */
+export const MAX_PREVIOUS_CATEGORIES = 20;
 
 export async function fetchTopic(
   genre: string,
   difficulty: Difficulty,
-  avoidCategories: string[] = [],
+  previousCategories: string[] = [],
   signal?: AbortSignal,
 ): Promise<Topic> {
   const data = await postJson(
     "/api/generate-topic",
-    { genre, difficulty, avoidCategories: avoidCategories.slice(-MAX_AVOID_CATEGORIES) },
+    { genre, difficulty, previousCategories: previousCategories.slice(-MAX_PREVIOUS_CATEGORIES) },
     signal,
   );
   if (

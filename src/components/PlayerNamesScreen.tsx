@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowLeft, Gauge, Play, RotateCcw, Sparkles, Timer, TriangleAlert } from "lucide-react";
-import type { FormEvent, ReactNode } from "react";
+import { ArrowLeft, Play, RotateCcw, TriangleAlert } from "lucide-react";
+import type { FormEvent } from "react";
 import { CozyLoader } from "@/components/CozyLoader";
+import { SettingsSummary } from "@/components/ui";
 import { MAX_NAME_LENGTH, defaultPlayerName, playerColor, type Settings } from "@/lib/game";
 
 type PlayerNamesScreenProps = {
@@ -34,17 +35,7 @@ export function PlayerNamesScreen({
   return (
     <main className="animate-screen-in relative mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-6 px-4 py-10">
       <div className="flex flex-col items-center gap-3 text-center">
-        <div className="flex flex-wrap justify-center gap-2">
-          <SummaryChip icon={<Sparkles className="size-4" strokeWidth={2.5} />} className="bg-lavender">
-            {settings.genre}
-          </SummaryChip>
-          <SummaryChip icon={<Gauge className="size-4" strokeWidth={2.5} />} className="bg-butter">
-            {settings.difficulty}
-          </SummaryChip>
-          <SummaryChip icon={<Timer className="size-4" strokeWidth={2.5} />} className="bg-peach">
-            {settings.seconds}s each
-          </SummaryChip>
-        </div>
+        <SettingsSummary genre={settings.genre} difficulty={settings.difficulty} seconds={settings.seconds} />
         <h2 className="font-display text-4xl font-bold sm:text-5xl">Who&apos;s playing?</h2>
         <p className="text-ink-soft font-semibold">Leave a box empty to keep the default name.</p>
       </div>
@@ -124,24 +115,5 @@ export function PlayerNamesScreen({
         </div>
       )}
     </main>
-  );
-}
-
-function SummaryChip({
-  icon,
-  className,
-  children,
-}: {
-  icon: ReactNode;
-  className: string;
-  children: ReactNode;
-}) {
-  return (
-    <span
-      className={`flex max-w-full items-center gap-1.5 rounded-full border-2 border-ink/20 px-3 py-1 text-sm font-extrabold ${className}`}
-    >
-      {icon}
-      <span className="truncate">{children}</span>
-    </span>
   );
 }

@@ -100,6 +100,17 @@ export async function chatJson({
   throw new Error(`AI returned invalid JSON: ${String(lastError)}`);
 }
 
+/** A player-facing message for an AI failure (used by the online room routes). */
+export function aiErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof AiConfigError) return err.message;
+  if (err instanceof OpenAI.APIError) {
+    console.error("[ai] provider error", err.status, err.message);
+    return err.status === 429 ? "AI rate limit reached, try again shortly." : fallback;
+  }
+  console.error("[ai]", err);
+  return fallback;
+}
+
 /** Maps errors from AI routes to a JSON error response. */
 export function aiErrorResponse(err: unknown): Response {
   if (err instanceof AiConfigError) {

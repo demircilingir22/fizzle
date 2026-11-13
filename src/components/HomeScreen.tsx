@@ -2,7 +2,9 @@
 
 import { ArrowRight, ChevronDown, Gauge, Timer, Users } from "lucide-react";
 import { useId, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import { CozyLoader } from "@/components/CozyLoader";
 import { GameLogo } from "@/components/Logo";
+import { BackButton, ErrorBanner } from "@/components/ui";
 import {
   DIFFICULTIES,
   MAX_GENRE_LENGTH,
@@ -21,11 +23,33 @@ type HomeScreenProps = {
   settings: Settings;
   onChange: (patch: Partial<Settings>) => void;
   onSubmit: () => void;
+  onBack?: () => void;
+  /** Hide the player-count picker (online rooms, or when the players are already known). */
+  hidePlayerCount?: boolean;
+  /** Shown under the logo, e.g. who's playing or "Hosting an online room". */
+  banner?: ReactNode;
+  /** Accessible label of the arrow button. */
+  submitLabel?: string;
+  /** A category is being generated after submitting. */
+  loading?: boolean;
+  onCancelLoading?: () => void;
+  error?: string | null;
 };
 
-export function HomeScreen({ settings, onChange, onSubmit }: HomeScreenProps) {
+export function HomeScreen({
+  settings,
+  onChange,
+  onSubmit,
+  onBack,
+  hidePlayerCount = false,
+  banner,
+  submitLabel = "Continue to player names",
+  loading = false,
+  onCancelLoading,
+  error,
+}: HomeScreenProps) {
   const genreId = useId();
-  const canSubmit = settings.genre.trim().length > 0;
+  const canSubmit = settings.genre.trim().length > 0 && !loading;
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -34,11 +58,17 @@ export function HomeScreen({ settings, onChange, onSubmit }: HomeScreenProps) {
 
   return (
     <main className="animate-screen-in mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center gap-7 px-4 py-10">
+      {onBack && (
+        <div className="-mb-3 w-full">
+          <BackButton onClick={onBack} />
+        </div>
+      )}
       <div className="flex flex-col items-center gap-3 text-center">
         <GameLogo />
         <p className="text-ink-soft text-base font-semibold sm:text-lg">
           Take turns naming things. Don&apos;t let your fuse burn out!
         </p>
+        {banner}
       </div>
 
       {/* Genre */}
@@ -60,7 +90,7 @@ export function HomeScreen({ settings, onChange, onSubmit }: HomeScreenProps) {
           <button
             type="submit"
             disabled={!canSubmit}
-            aria-label="Continue to player names"
+            aria-label={submitLabel}
             className="press bg-coral flex size-14 shrink-0 items-center justify-center rounded-full border-[3px] border-ink text-ink disabled:cursor-not-allowed disabled:opacity-40 sm:size-16"
           >
             <ArrowRight className="size-7" strokeWidth={3} />
@@ -78,22 +108,38 @@ export function HomeScreen({ settings, onChange, onSubmit }: HomeScreenProps) {
             </button>
           ))}
         </div>
+        {error && (
+          <div className="mt-4">
+            <ErrorBanner>{error}</ErrorBanner>
+          </div>
+        )}
       </form>
 
       {/* Difficulty + players */}
-      <div className="grid w-full grid-cols-2 gap-3 sm:gap-4">
+      <div className={`grid w-full gap-3 sm:gap-4 ${hidePlayerCount ? "grid-cols-1" : "grid-cols-2"}`}>
         <SettingCard icon={<Gauge className="size-4" strokeWidth={2.5} />} label="Difficulty">
           <DifficultyToggle value={settings.difficulty} onChange={(difficulty) => onChange({ difficulty })} />
         </SettingCard>
-        <SettingCard icon={<Users className="size-4" strokeWidth={2.5} />} label="Players">
-          <PlayerCountSelect value={settings.playerCount} onChange={(playerCount) => onChange({ playerCount })} />
-        </SettingCard>
+        {!hidePlayerCount && (
+          <SettingCard icon={<Users className="size-4" strokeWidth={2.5} />} label="Players">
+            <PlayerCountSelect value={settings.playerCount} onChange={(playerCount) => onChange({ playerCount })} />
+          </SettingCard>
+        )}
       </div>
 
       {/* Timer */}
       <SettingCard icon={<Timer className="size-4" strokeWidth={2.5} />} label="Time per player" className="w-full">
         <TimerSlider value={settings.seconds} onChange={(seconds) => onChange({ seconds })} />
       </SettingCard>
+
+      {loading && (
+        <div className="animate-screen-in bg-cream/85 fixed inset-0 z-20 flex items-center justify-center backdrop-blur-sm">
+          <CozyLoader
+            title={`Picking a ${settings.difficulty.toLowerCase()} ${settings.genre.trim()} category`}
+            onCancel={onCancelLoading}
+          />
+        </div>
+      )}
     </main>
   );
 }

@@ -51,7 +51,8 @@ const SMOKE = [
 ].map((vars) => vars as CSSProperties);
 
 type PlayerBombProps = {
-  index: number;
+  /** Index into PLAYER_COLORS. */
+  color: number;
   name: string;
   remainingMs: number;
   totalMs: number;
@@ -63,10 +64,12 @@ type PlayerBombProps = {
   /** Their clock is frozen while the referee checks their answer. */
   frozen: boolean;
   eliminated: boolean;
+  /** Sticker text on the active bomb. */
+  turnLabel?: string;
 };
 
 export const PlayerBomb = memo(function PlayerBomb({
-  index,
+  color: colorIndex,
   name,
   remainingMs,
   totalMs,
@@ -75,9 +78,10 @@ export const PlayerBomb = memo(function PlayerBomb({
   ticking,
   frozen,
   eliminated,
+  turnLabel = "Your turn!",
 }: PlayerBombProps) {
   const fraction = Math.max(0, Math.min(1, remainingMs / totalMs));
-  const color = playerColor(index);
+  const color = playerColor(colorIndex);
   const { fill, text } = eliminated ? { fill: "var(--color-ash)", text: "#fff7ec" } : bombColors(color.base, fraction);
   const fuse = fuseUpTo(fraction);
   const clock = formatClock(remainingMs);
@@ -203,7 +207,7 @@ export const PlayerBomb = memo(function PlayerBomb({
                   <Snowflake className="size-[7cqi]" strokeWidth={3} /> Checking…
                 </>
               ) : (
-                "Your turn!"
+                turnLabel
               )}
             </span>
           )}

@@ -1,9 +1,9 @@
 "use client";
 
-import { Crown, House, LoaderCircle, RotateCcw, TriangleAlert } from "lucide-react";
+import { Crown, Hourglass, LoaderCircle, LogOut, RotateCcw, Sparkles, TriangleAlert } from "lucide-react";
 import type { CSSProperties } from "react";
 import { BombMascot } from "@/components/Logo";
-import { formatClock, playerColor, type GamePlayer } from "@/lib/game";
+import { formatClock, playerColor } from "@/lib/game";
 
 // Deterministic pseudo-random so confetti layout is identical on every render.
 const rand = (i: number, salt: number) => {
@@ -26,14 +26,24 @@ const CONFETTI = Array.from(
 );
 
 type WinnerOverlayProps = {
-  players: GamePlayer[];
+  players: { name: string; color: number; answers: number }[];
   winner: number | null;
   /** Elimination order, first out first. */
   eliminated: number[];
   winnerTimeMs: number;
   totalAnswers: number;
-  onPlayAgain: () => void;
-  onHome: () => void;
+  /** Same players, same genre/difficulty/timer, fresh category. */
+  onReplay: () => void;
+  /** Same players, pick a new genre. */
+  onNewGenre: () => void;
+  onLeave: () => void;
+  /** This screen may pick what happens next (always in local games; only the host online). */
+  canChoose: boolean;
+  /** Shown instead of the replay buttons when `canChoose` is false. */
+  waitingText?: string;
+  /** Why replaying isn't possible right now (e.g. not enough players left). */
+  blockedReason?: string | null;
+  /** The next match is being set up. */
   loading: boolean;
   error: string | null;
 };
@@ -44,13 +54,17 @@ export function WinnerOverlay({
   eliminated,
   winnerTimeMs,
   totalAnswers,
-  onPlayAgain,
-  onHome,
+  onReplay,
+  onNewGenre,
+  onLeave,
+  canChoose,
+  waitingText,
+  blockedReason,
   loading,
   error,
 }: WinnerOverlayProps) {
   const champion = winner === null ? null : players[winner];
-  const color = playerColor(winner ?? 0);
+  const color = playerColor(champion?.color ?? 0);
   // Winner first, then the rest in reverse elimination order.
   const standings = winner === null ? [...eliminated].reverse() : [winner, ...[...eliminated].reverse()];
 
@@ -109,7 +123,10 @@ export function WinnerOverlay({
               <li
                 key={playerIndex}
                 className="flex items-center gap-3 rounded-2xl px-3 py-1.5 font-bold"
-                style={{ backgroundColor: place === 0 && champion ? playerColor(playerIndex).base : "var(--color-cream)" }}
+                style={{
+                  backgroundColor:
+                    place === 0 && champion ? playerColor(players[playerIndex].color).base : "var(--color-cream)",
+                }}
               >
                 <span className="font-display w-6 text-center text-lg">{place + 1}</span>
                 <span className="flex-1 truncate">{players[playerIndex].name}</span>
@@ -126,33 +143,72 @@ export function WinnerOverlay({
           </p>
         )}
 
-        <div className="flex w-full flex-col gap-3 sm:flex-row">
-          <button
-            type="button"
-            onClick={onPlayAgain}
-            disabled={loading}
-            autoFocus
-            className="press bg-mint font-display flex h-14 flex-1 items-center justify-center gap-2 rounded-full border-[3px] border-ink text-xl font-bold disabled:opacity-70"
-          >
-            {loading ? (
-              <>
-                <LoaderCircle className="size-6 animate-spin" strokeWidth={3} /> New category…
-              </>
-            ) : (
-              <>
-                <RotateCcw className="size-6" strokeWidth={3} /> Play Again
-              </>
+        {canChoose ? (
+          <div className="flex w-full flex-col gap-3">
+            {blockedReason && !loading && (
+              <p className="bg-butter rounded-2xl px-3 py-2 text-sm font-bold">{blockedReason}</p>
             )}
-          </button>
-          <button
-            type="button"
-            onClick={onHome}
-            className="press bg-paper font-display flex h-14 items-center justify-center gap-2 rounded-full border-[3px] border-ink px-6 text-xl font-semibold"
-          >
-            <House className="size-5" strokeWidth={3} /> Home
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={onReplay}
+              disabled={loading || !!blockedReason}
+              autoFocus
+              className="press bg-mint font-display flex h-14 w-full items-center justify-center gap-2 rounded-full border-[3px] border-ink text-xl font-bold disabled:opacity-60"
+            >
+              {loading ? (
+                <>
+                  <LoaderCircle className="size-6 animate-spin" strokeWidth={3} /> New category…
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="size-6" strokeWidth={3} /> Replay <span className="font-medium">(Same Genre)</span>
+                </>
+              )}
+            </button>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={onNewGenre}
+                disabled={loading || !!blockedReason}
+                className="press bg-lavender font-display flex h-14 w-full items-center sm:w-auto sm:flex-1 justify-center gap-2 rounded-full border-[3px] border-ink px-4 text-lg leading-tight font-semibold disabled:opacity-60"
+              >
+                <Sparkles className="size-5 shrink-0" strokeWidth={3} />
+                <span>
+                  New Genre <span className="text-sm font-medium">(Same Players)</span>
+                </span>
+              </button>
+              <LeaveButton onClick={onLeave} />
+            </div>
+          </div>
+        ) : (
+          <div className="flex w-full flex-col items-center gap-3">
+            <p
+              role="status"
+              className="bg-cream-deep flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold motion-safe:animate-pulse"
+            >
+              {loading ? (
+                <LoaderCircle className="size-4 animate-spin" strokeWidth={3} />
+              ) : (
+                <Hourglass className="size-4" strokeWidth={2.5} />
+              )}
+              {loading ? "Picking a new category…" : waitingText}
+            </p>
+            <LeaveButton onClick={onLeave} />
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+function LeaveButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="press bg-paper font-display flex h-14 items-center justify-center gap-2 rounded-full border-[3px] border-ink px-6 text-lg font-semibold"
+    >
+      <LogOut className="size-5" strokeWidth={3} /> Leave Lobby
+    </button>
   );
 }
